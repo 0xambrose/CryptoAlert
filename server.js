@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const CoinGecko = require('./coingecko');
 const Database = require('./database');
+const AlertManager = require('./alerts');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -9,6 +10,7 @@ const PORT = process.env.PORT || 3000;
 // Initialize services
 const coinGecko = new CoinGecko();
 const database = new Database();
+const alertManager = new AlertManager(database, coinGecko);
 
 // Middleware
 app.use(express.json());
@@ -50,6 +52,52 @@ app.get('/api/coins', async (req, res) => {
         res.json(coins.slice(0, 100)); // Return first 100 coins
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch coins list' });
+    }
+});
+
+// Create a new alert
+app.post('/api/alerts', async (req, res) => {
+    try {
+        const { coinId, coinName, targetPrice, condition, email } = req.body;
+
+        if (!coinId || !coinName || !targetPrice || !condition || !email) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        if (!['above', 'below'].includes(condition)) {
+            return res.status(400).json({ error: 'Condition must be "above" or "below"' });
+        }
+
+        const result = await alertManager.createAlert(coinId, coinName, targetPrice, condition, email);
+        res.status(201).json({ message: 'Alert created', alertId: result.id });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to create alert' });
+    }
+});
+
+// Get active alerts
+app.get('/api/alerts', async (req, res) => {
+    try {
+        const alerts = await alertManager.getActiveAlerts();
+        res.json(alerts);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch alerts' });
+    }
+});
+
+// Deactivate an alert
+app.delete('/api/alerts/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await alertManager.deactivateAlert(id);
+
+        if (result.changes === 0) {
+            return res.status(404).json({ error: 'Alert not found' });
+        }
+
+        res.json({ message: 'Alert deactivated' });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to deactivate alert' });
     }
 });
 
