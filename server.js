@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const cron = require('node-cron');
 const CoinGecko = require('./coingecko');
 const Database = require('./database');
 const AlertManager = require('./alerts');
@@ -101,6 +102,13 @@ app.delete('/api/alerts/:id', async (req, res) => {
     }
 });
 
+// Schedule alert checking every 5 minutes
+cron.schedule('*/5 * * * *', () => {
+    console.log('Checking alerts...');
+    alertManager.checkAlerts();
+});
+
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+    console.log('Alert checker scheduled to run every 5 minutes');
 });
