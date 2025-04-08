@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CryptoAlert</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>CryptoAlert</h1>
+        <p>Cryptocurrency Price Monitoring & Alerts</p>
+    </header>
+
+    <main>
+        <section id="price-section">
+            <h2>Current Prices</h2>
+            <div id="popular-coins">
+                <div class="coin-card" data-coin="bitcoin">
+                    <h3>Bitcoin (BTC)</h3>
+                    <div class="price" id="btc-price">Loading...</div>
+                    <div class="change" id="btc-change"></div>
+                </div>
+                <div class="coin-card" data-coin="ethereum">
+                    <h3>Ethereum (ETH)</h3>
+                    <div class="price" id="eth-price">Loading...</div>
+                    <div class="change" id="eth-change"></div>
+                </div>
+                <div class="coin-card" data-coin="binancecoin">
+                    <h3>Binance Coin (BNB)</h3>
+                    <div class="price" id="bnb-price">Loading...</div>
+                    <div class="change" id="bnb-change"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="alert-section">
+            <h2>Price Alerts</h2>
+
+            <form id="alert-form">
+                <div class="form-group">
+                    <label for="coin-select">Cryptocurrency:</label>
+                    <select id="coin-select" required>
+                        <option value="">Select a coin...</option>
+                        <option value="bitcoin">Bitcoin (BTC)</option>
+                        <option value="ethereum">Ethereum (ETH)</option>
+                        <option value="binancecoin">Binance Coin (BNB)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="target-price">Target Price ($):</label>
+                    <input type="number" id="target-price" step="0.01" min="0" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="condition">Condition:</label>
+                    <select id="condition" required>
+                        <option value="above">Price goes above</option>
+                        <option value="below">Price goes below</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" placeholder="your@email.com" required>
+                </div>
+
+                <button type="submit">Create Alert</button>
+            </form>
+
+            <div id="active-alerts">
+                <h3>Active Alerts</h3>
+                <div id="alerts-list">Loading alerts...</div>
+            </div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
