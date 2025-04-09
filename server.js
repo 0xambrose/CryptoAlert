@@ -4,6 +4,7 @@ const cron = require('node-cron');
 const CoinGecko = require('./coingecko');
 const Database = require('./database');
 const AlertManager = require('./alerts');
+const Logger = require('./logger');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -42,6 +43,7 @@ app.get('/api/price/:coinId', async (req, res) => {
             change24h: priceData.change24h
         });
     } catch (error) {
+        Logger.error(`Failed to fetch price for ${coinId}`, error);
         res.status(500).json({ error: 'Failed to fetch price' });
     }
 });
@@ -70,8 +72,10 @@ app.post('/api/alerts', async (req, res) => {
         }
 
         const result = await alertManager.createAlert(coinId, coinName, targetPrice, condition, email);
+        Logger.info(`Alert created for ${coinName} by ${email}`, { alertId: result.id, targetPrice, condition });
         res.status(201).json({ message: 'Alert created', alertId: result.id });
     } catch (error) {
+        Logger.error('Failed to create alert', error);
         res.status(500).json({ error: 'Failed to create alert' });
     }
 });
@@ -104,11 +108,17 @@ app.delete('/api/alerts/:id', async (req, res) => {
 
 // Schedule alert checking every 5 minutes
 cron.schedule('*/5 * * * *', () => {
-    console.log('Checking alerts...');
+    Logger.info('Running scheduled alert check');
     alertManager.checkAlerts();
 });
 
+// Global error handler
+app.use((error, req, res, next) => {
+    Logger.error('Unhandled error', error);
+    res.status(500).json({ error: 'Internal server error' });
+});
+
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log('Alert checker scheduled to run every 5 minutes');
+    Logger.info(`CryptoAlert server started on port ${PORT}`);
+    Logger.info('Alert checker scheduled to run every 5 minutes');
 });
