@@ -1,9 +1,11 @@
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const cron = require('node-cron');
 const CoinGecko = require('./coingecko');
 const Database = require('./database');
 const AlertManager = require('./alerts');
+const EmailService = require('./emailService');
 const Logger = require('./logger');
 
 const app = express();
@@ -12,7 +14,8 @@ const PORT = process.env.PORT || 3000;
 // Initialize services
 const coinGecko = new CoinGecko();
 const database = new Database();
-const alertManager = new AlertManager(database, coinGecko);
+const emailService = new EmailService();
+const alertManager = new AlertManager(database, coinGecko, emailService);
 
 // Middleware
 app.use(express.json());
@@ -103,6 +106,23 @@ app.delete('/api/alerts/:id', async (req, res) => {
         res.json({ message: 'Alert deactivated' });
     } catch (error) {
         res.status(500).json({ error: 'Failed to deactivate alert' });
+    }
+});
+
+// Test email endpoint
+app.post('/api/test-email', async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ error: 'Email address required' });
+        }
+
+        await emailService.sendTestEmail(email);
+        res.json({ message: 'Test email sent successfully' });
+    } catch (error) {
+        Logger.error('Failed to send test email', error);
+        res.status(500).json({ error: error.message || 'Failed to send test email' });
     }
 });
 

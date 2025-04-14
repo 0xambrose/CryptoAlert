@@ -1,7 +1,8 @@
 class AlertManager {
-    constructor(database, coinGecko) {
+    constructor(database, coinGecko, emailService = null) {
         this.db = database.db;
         this.coinGecko = coinGecko;
+        this.emailService = emailService;
     }
 
     // Create a new alert
@@ -120,7 +121,11 @@ class AlertManager {
                 if (shouldTrigger) {
                     await this.triggerAlert(alert.id);
                     console.log(`Alert triggered for ${alert.coin_name}: ${currentPrice} (target: ${alert.target_price})`);
-                    // Here you would send email notification
+
+                    // Send email notification if email service is available
+                    if (this.emailService) {
+                        await this.emailService.sendAlertEmail(alert, currentPrice);
+                    }
                 }
             }
         } catch (error) {
