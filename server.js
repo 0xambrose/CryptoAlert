@@ -109,6 +109,20 @@ app.delete('/api/alerts/:id', async (req, res) => {
     }
 });
 
+// Get price history for a coin
+app.get('/api/history/:coinId', async (req, res) => {
+    try {
+        const { coinId } = req.params;
+        const limit = parseInt(req.query.limit) || 100;
+
+        const history = await alertManager.getPriceHistory(coinId, limit);
+        res.json(history);
+    } catch (error) {
+        Logger.error(`Failed to fetch price history for ${req.params.coinId}`, error);
+        res.status(500).json({ error: 'Failed to fetch price history' });
+    }
+});
+
 // Test email endpoint
 app.post('/api/test-email', async (req, res) => {
     try {

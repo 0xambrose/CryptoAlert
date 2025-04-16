@@ -11,6 +11,8 @@ class CryptoAlertApp {
 
     init() {
         this.popularCoins = ['bitcoin', 'ethereum', 'binancecoin'];
+        this.supportedCoins = [];
+        this.loadSupportedCoins();
     }
 
     setupEventListeners() {
@@ -60,6 +62,59 @@ class CryptoAlertApp {
         } catch (error) {
             console.error('Error loading alerts:', error);
             document.getElementById('alerts-list').innerHTML = 'Error loading alerts';
+        }
+    }
+
+    async loadSupportedCoins() {
+        try {
+            const response = await fetch('/api/coins');
+            const coins = await response.json();
+
+            this.supportedCoins = coins;
+            this.populateCoinSelect(coins);
+        } catch (error) {
+            console.error('Error loading supported coins:', error);
+            // Fallback to default coins
+            const fallbackCoins = [
+                { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC' },
+                { id: 'ethereum', name: 'Ethereum', symbol: 'ETH' },
+                { id: 'binancecoin', name: 'Binance Coin', symbol: 'BNB' }
+            ];
+            this.populateCoinSelect(fallbackCoins);
+        }
+    }
+
+    populateCoinSelect(coins) {
+        const coinSelect = document.getElementById('coin-select');
+        coinSelect.innerHTML = '<option value="">Select a coin...</option>';
+
+        // Add popular coins first
+        const popularIds = ['bitcoin', 'ethereum', 'binancecoin', 'cardano', 'solana', 'dogecoin', 'polkadot', 'litecoin'];
+        const popularCoins = coins.filter(coin => popularIds.includes(coin.id));
+        const otherCoins = coins.filter(coin => !popularIds.includes(coin.id));
+
+        if (popularCoins.length > 0) {
+            const popularGroup = document.createElement('optgroup');
+            popularGroup.label = 'Popular Cryptocurrencies';
+            popularCoins.forEach(coin => {
+                const option = document.createElement('option');
+                option.value = coin.id;
+                option.textContent = `${coin.name} (${coin.symbol})`;
+                popularGroup.appendChild(option);
+            });
+            coinSelect.appendChild(popularGroup);
+        }
+
+        if (otherCoins.length > 0) {
+            const otherGroup = document.createElement('optgroup');
+            otherGroup.label = 'Other Cryptocurrencies';
+            otherCoins.slice(0, 50).forEach(coin => { // Limit to 50 to avoid overwhelming UI
+                const option = document.createElement('option');
+                option.value = coin.id;
+                option.textContent = `${coin.name} (${coin.symbol})`;
+                otherGroup.appendChild(option);
+            });
+            coinSelect.appendChild(otherGroup);
         }
     }
 

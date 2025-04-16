@@ -89,6 +89,40 @@ class AlertManager {
         });
     }
 
+    // Record price history
+    recordPriceHistory(coinId, price) {
+        return new Promise((resolve, reject) => {
+            this.db.run(`
+                INSERT INTO price_history (coin_id, price)
+                VALUES (?, ?)
+            `, [coinId, price], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ id: this.lastID });
+                }
+            });
+        });
+    }
+
+    // Get price history for a coin
+    getPriceHistory(coinId, limit = 100) {
+        return new Promise((resolve, reject) => {
+            this.db.all(`
+                SELECT * FROM price_history
+                WHERE coin_id = ?
+                ORDER BY timestamp DESC
+                LIMIT ?
+            `, [coinId, limit], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows);
+                }
+            });
+        });
+    }
+
     // Check all active alerts and trigger if needed
     async checkAlerts() {
         try {
@@ -103,6 +137,18 @@ class AlertManager {
 
             // Fetch current prices
             const prices = await this.coinGecko.getPrices(coinIds);
+
+            // Record price history for all fetched coins
+            for (const coinId of coinIds) {
+                const price = prices[coinId]?.usd;
+                if (price) {
+                    try {
+                        await this.recordPriceHistory(coinId, price);
+                    } catch (error) {
+                        console.error(`Failed to record price history for ${coinId}:`, error);
+                    }
+                }
+            }
 
             // Check each alert
             for (const alert of alerts) {
