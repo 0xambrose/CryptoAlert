@@ -2,14 +2,27 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const cron = require('node-cron');
+const rateLimit = require('express-rate-limit');
 const CoinGecko = require('./coingecko');
 const Database = require('./database');
 const AlertManager = require('./alerts');
 const EmailService = require('./emailService');
 const Logger = require('./logger');
+const config = require('./config');
+
+// Validate configuration
+const configErrors = config.validate();
+if (configErrors.length > 0) {
+    Logger.error('Configuration validation failed:', configErrors);
+    process.exit(1);
+}
+
+// Print configuration in development
+if (config.isDevelopment()) {
+    config.print();
+}
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // Initialize services
 const coinGecko = new CoinGecko();
@@ -20,6 +33,22 @@ const alertManager = new AlertManager(database, coinGecko, emailService);
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Rate limiting
+if (config.rateLimiting.enabled) {
+    const limiter = rateLimit({
+        windowMs: config.rateLimiting.windowMs,
+        max: config.rateLimiting.maxRequests,
+        message: {
+            error: 'Too many requests, please try again later',
+            retryAfter: Math.ceil(config.rateLimiting.windowMs / 1000)
+        },
+        standardHeaders: true,
+        legacyHeaders: false
+    });
+    app.use('/api/', limiter);
+    Logger.info(`Rate limiting enabled: ${config.rateLimiting.maxRequests} requests per ${config.rateLimiting.windowMs / 1000 / 60} minutes`);
+}
 
 // Routes
 app.get('/', (req, res) => {
@@ -140,8 +169,8 @@ app.post('/api/test-email', async (req, res) => {
     }
 });
 
-// Schedule alert checking every 5 minutes
-cron.schedule('*/5 * * * *', () => {
+// Schedule alert checking with configurable interval
+cron.schedule(config.alerts.checkInterval, () => {
     Logger.info('Running scheduled alert check');
     alertManager.checkAlerts();
 });
@@ -152,7 +181,8 @@ app.use((error, req, res, next) => {
     res.status(500).json({ error: 'Internal server error' });
 });
 
-app.listen(PORT, () => {
-    Logger.info(`CryptoAlert server started on port ${PORT}`);
-    Logger.info('Alert checker scheduled to run every 5 minutes');
+app.listen(config.port, () => {
+    Logger.info(`CryptoAlert server started on port ${config.port}`);
+    Logger.info(`Alert checker scheduled with interval: ${config.alerts.checkInterval}`);
+    Logger.info(`Email notifications: ${config.email.enabled ? 'enabled' : 'disabled'}`);
 });
