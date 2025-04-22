@@ -55,8 +55,44 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'OK', message: 'Server is running' });
+app.get('/api/health', async (req, res) => {
+    const healthCheck = {
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        version: require('./package.json').version,
+        services: {
+            database: 'unknown',
+            email: config.email.enabled ? 'configured' : 'disabled',
+            api: 'unknown'
+        }
+    };
+
+    try {
+        // Check database
+        await new Promise((resolve, reject) => {
+            database.db.get('SELECT 1', (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+        healthCheck.services.database = 'healthy';
+    } catch (error) {
+        healthCheck.services.database = 'unhealthy';
+        healthCheck.status = 'degraded';
+    }
+
+    try {
+        // Check CoinGecko API
+        await coinGecko.getPrice('bitcoin');
+        healthCheck.services.api = 'healthy';
+    } catch (error) {
+        healthCheck.services.api = 'unhealthy';
+        healthCheck.status = 'degraded';
+    }
+
+    const httpStatus = healthCheck.status === 'OK' ? 200 : 503;
+    res.status(httpStatus).json(healthCheck);
 });
 
 // Get current price for a coin
@@ -181,8 +217,48 @@ app.use((error, req, res, next) => {
     res.status(500).json({ error: 'Internal server error' });
 });
 
-app.listen(config.port, () => {
+const server = app.listen(config.port, () => {
     Logger.info(`CryptoAlert server started on port ${config.port}`);
     Logger.info(`Alert checker scheduled with interval: ${config.alerts.checkInterval}`);
     Logger.info(`Email notifications: ${config.email.enabled ? 'enabled' : 'disabled'}`);
+});
+
+// Graceful shutdown handling
+const gracefulShutdown = (signal) => {
+    Logger.info(`Received ${signal}. Starting graceful shutdown...`);
+
+    server.close((err) => {
+        if (err) {
+            Logger.error('Error during server close:', err);
+            process.exit(1);
+        }
+
+        Logger.info('Server closed successfully');
+
+        // Close database connection
+        database.close();
+
+        Logger.info('Graceful shutdown completed');
+        process.exit(0);
+    });
+
+    // Force shutdown after 10 seconds
+    setTimeout(() => {
+        Logger.error('Forced shutdown due to timeout');
+        process.exit(1);
+    }, 10000);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught exceptions and rejections
+process.on('uncaughtException', (error) => {
+    Logger.error('Uncaught Exception:', error);
+    gracefulShutdown('uncaughtException');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    Logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    gracefulShutdown('unhandledRejection');
 });

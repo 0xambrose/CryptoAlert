@@ -4,12 +4,18 @@ A cryptocurrency price monitoring and alert system built with Node.js, Express, 
 
 ## Features
 
-- **Real-time Price Monitoring**: Track current prices for Bitcoin, Ethereum, and Binance Coin
+- **Real-time Price Monitoring**: Track current prices for 100+ cryptocurrencies
 - **Custom Price Alerts**: Set alerts for when prices go above or below target thresholds
+- **Email Notifications**: Receive beautiful HTML email alerts when thresholds are reached
 - **Web Interface**: Clean, responsive web UI for managing alerts and viewing prices
-- **Automated Checking**: Background cron job checks alerts every 5 minutes
-- **Database Storage**: SQLite database for persistent alert storage
+- **Price History Tracking**: Automatic price history recording with API access
+- **Automated Checking**: Configurable background cron job for alert checking
+- **Rate Limiting**: Built-in API rate limiting for protection
+- **Database Storage**: SQLite database for persistent alert and history storage
 - **REST API**: Complete API for programmatic access
+- **Graceful Shutdown**: Proper signal handling and cleanup
+- **Health Monitoring**: Comprehensive health check endpoint
+- **Environment Configuration**: Extensive configuration options via environment variables
 
 ## Quick Start
 
